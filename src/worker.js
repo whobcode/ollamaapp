@@ -62,6 +62,28 @@ export default {
       });
     }
 
+    if (url.pathname === '/manifest.json') {
+      return new Response(MANIFEST, {
+        headers: { 'Content-Type': 'application/json;charset=UTF-8' }
+      });
+    }
+
+    if (url.pathname === '/sw.js') {
+      return new Response(SERVICE_WORKER, {
+        headers: { 'Content-Type': 'application/javascript;charset=UTF-8' }
+      });
+    }
+
+    if (url.pathname === '/favicon.ico') {
+      // Fetch favicon from GitHub
+      return fetch('https://raw.githubusercontent.com/whobcode/logos/main/logohead.png');
+    }
+
+    if (url.pathname === '/icon-192.png' || url.pathname === '/icon-512.png') {
+      // Use the same favicon from GitHub for PWA icons
+      return fetch('https://raw.githubusercontent.com/whobcode/logos/main/logohead.png');
+    }
+
     return new Response('Not Found', { status: 404 });
   }
 };
@@ -70,7 +92,15 @@ const HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="theme-color" content="#DC143C">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ollama Chat">
+  <meta name="description" content="Realtime AI chat with multi-model support and video capabilities">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/png" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/favicon.ico">
   <title>Ollama Realtime Chat - Multi-Model with Video</title>
   <style>
     * {
@@ -241,8 +271,17 @@ const HTML = `<!DOCTYPE html>
 
     .video-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
       gap: 10px;
+      max-height: 100%;
+    }
+
+    .video-grid:has(.video-wrapper:nth-child(3)) {
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    }
+
+    .video-grid:has(.video-wrapper:nth-child(5)) {
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
     }
 
     .video-wrapper {
@@ -251,6 +290,7 @@ const HTML = `<!DOCTYPE html>
       border-radius: 8px;
       overflow: hidden;
       aspect-ratio: 16/9;
+      max-width: 180px;
     }
 
     .video-wrapper video {
@@ -542,6 +582,270 @@ const HTML = `<!DOCTYPE html>
     #fileInput {
       display: none;
     }
+
+    .drag-drop-zone {
+      border: 2px dashed #e5e7eb;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      color: #6b7280;
+      margin-bottom: 12px;
+      transition: all 0.3s;
+      display: none;
+    }
+
+    .drag-drop-zone.active {
+      display: block;
+    }
+
+    .drag-drop-zone.dragover {
+      border-color: #B8860B;
+      background: rgba(184, 134, 11, 0.05);
+      color: #B8860B;
+    }
+
+    /* Mobile Responsiveness - Tablets */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+
+      .container {
+        max-width: 100%;
+        height: 100vh;
+        border-radius: 12px;
+      }
+
+      .header {
+        padding: 12px 20px;
+      }
+
+      .header h1 {
+        font-size: 18px;
+      }
+
+      .model-selector {
+        flex-wrap: wrap;
+      }
+
+      .model-selector select {
+        min-width: 160px;
+        font-size: 12px;
+      }
+
+      .video-panel {
+        max-height: 250px;
+      }
+
+      .video-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      }
+
+      .chat-container {
+        padding: 20px;
+        gap: 15px;
+      }
+
+      .message {
+        max-width: 85%;
+      }
+
+      .input-container {
+        padding: 15px 20px;
+      }
+
+      button {
+        padding: 10px 16px;
+        font-size: 13px;
+      }
+    }
+
+    /* Mobile Responsiveness - Phones */
+    @media (max-width: 480px) {
+      body {
+        padding: 0;
+      }
+
+      .container {
+        height: 100vh;
+        border-radius: 0;
+        max-width: 100%;
+      }
+
+      .header {
+        padding: 10px 15px;
+      }
+
+      .header-top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .header-left {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .header h1 {
+        font-size: 16px;
+      }
+
+      .video-toggle-btn {
+        font-size: 11px;
+        padding: 5px 10px;
+      }
+
+      .status {
+        font-size: 12px;
+      }
+
+      .model-selector {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+
+      .model-selector label {
+        font-size: 12px;
+      }
+
+      .model-selector select {
+        width: 100%;
+        min-width: 100%;
+        font-size: 12px;
+        padding: 8px 12px;
+      }
+
+      .video-panel {
+        padding: 10px;
+        max-height: 200px;
+      }
+
+      .video-controls {
+        gap: 6px;
+      }
+
+      .video-btn {
+        flex: 1;
+        min-width: calc(50% - 3px);
+        padding: 10px 8px;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      .video-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .chat-container {
+        padding: 15px;
+        gap: 12px;
+      }
+
+      .message {
+        max-width: 90%;
+        gap: 8px;
+      }
+
+      .message-avatar {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+      }
+
+      .message-content {
+        padding: 10px 14px;
+        font-size: 14px;
+        border-radius: 12px;
+      }
+
+      .attached-image {
+        max-width: 150px;
+        max-height: 150px;
+      }
+
+      .system-message {
+        font-size: 12px;
+        padding: 10px;
+      }
+
+      .input-container {
+        padding: 12px 15px;
+      }
+
+      .input-row {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .controls {
+        width: 100%;
+        gap: 6px;
+      }
+
+      #messageInput {
+        font-size: 14px;
+        padding: 12px 16px;
+        min-height: 44px;
+      }
+
+      button {
+        flex: 1;
+        padding: 12px 16px;
+        font-size: 13px;
+        border-radius: 10px;
+        min-height: 44px;
+      }
+
+      .attached-files-preview {
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .attached-file-item {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
+    }
+
+    /* Touch-friendly improvements */
+    @media (hover: none) and (pointer: coarse) {
+      button, .video-btn, .remove-file, .video-toggle-btn {
+        min-height: 44px;
+        min-width: 44px;
+      }
+
+      .model-selector select {
+        min-height: 44px;
+      }
+
+      #messageInput {
+        min-height: 44px;
+      }
+    }
+
+    /* Landscape mode on mobile */
+    @media (max-width: 768px) and (orientation: landscape) {
+      .container {
+        height: 100vh;
+      }
+
+      .video-panel {
+        max-height: 150px;
+      }
+
+      .video-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+
+      .chat-container {
+        padding: 15px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -587,6 +891,9 @@ const HTML = `<!DOCTYPE html>
     </div>
 
     <div class="input-container">
+      <div id="dragDropZone" class="drag-drop-zone">
+        📎 Drop files here or tap to select
+      </div>
       <div id="attachedFilesPreview" class="attached-files-preview"></div>
 
       <div class="input-row">
@@ -604,7 +911,7 @@ const HTML = `<!DOCTYPE html>
         </div>
       </div>
 
-      <input type="file" id="fileInput" multiple accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx,.json,.csv,.md">
+      <input type="file" id="fileInput" multiple accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx,.json,.csv,.md" capture="environment">
     </div>
   </div>
 
@@ -647,6 +954,7 @@ const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const modelSelect = document.getElementById('modelSelect');
 const attachedFilesPreview = document.getElementById('attachedFilesPreview');
+const dragDropZone = document.getElementById('dragDropZone');
 
 // Video elements
 const videoToggleBtn = document.getElementById('videoToggleBtn');
@@ -840,10 +1148,25 @@ function handlePeerLeft(peerId) {
 async function createPeerConnection(peerId, createOffer = false) {
   const pc = new RTCPeerConnection(ICE_SERVERS);
 
-  // Add local tracks
+  // Add local tracks with mobile optimization
   if (localStream) {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
     localStream.getTracks().forEach(track => {
-      pc.addTrack(track, localStream);
+      const sender = pc.addTrack(track, localStream);
+
+      // Apply bandwidth limitations on mobile
+      if (isMobile && track.kind === 'video') {
+        const parameters = sender.getParameters();
+        if (!parameters.encodings) {
+          parameters.encodings = [{}];
+        }
+        // Limit to 500 kbps on mobile for better performance
+        parameters.encodings[0].maxBitrate = 500000;
+        sender.setParameters(parameters).catch(err =>
+          console.log('Failed to set parameters:', err)
+        );
+      }
     });
   }
 
@@ -960,18 +1283,108 @@ function addRemoteVideo(peerId, stream) {
     videoWrapper.appendChild(video);
     videoWrapper.appendChild(label);
     videoGrid.appendChild(videoWrapper);
+
+    // Add touch controls to video
+    addVideoTouchControls(videoWrapper);
   }
 
   const video = videoWrapper.querySelector('video');
   video.srcObject = stream;
 }
 
+// Touch controls for video elements
+function addVideoTouchControls(videoWrapper) {
+  let lastTap = 0;
+  let initialDistance = 0;
+  let currentScale = 1;
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  const video = videoWrapper.querySelector('video');
+
+  // Double-tap to toggle fullscreen
+  videoWrapper.addEventListener('touchend', (e) => {
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTap;
+
+    if (tapLength < 300 && tapLength > 0) {
+      // Double tap detected
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else if (videoWrapper.requestFullscreen) {
+        videoWrapper.requestFullscreen();
+      } else if (videoWrapper.webkitRequestFullscreen) {
+        videoWrapper.webkitRequestFullscreen();
+      }
+    }
+
+    lastTap = currentTime;
+  });
+
+  // Pinch to zoom
+  videoWrapper.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      initialDistance = getDistance(e.touches[0], e.touches[1]);
+    } else if (e.touches.length === 1) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }
+  });
+
+  videoWrapper.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const currentDistance = getDistance(e.touches[0], e.touches[1]);
+      const scale = currentDistance / initialDistance;
+      currentScale = Math.min(Math.max(scale, 0.5), 3);
+
+      video.style.transform = \`scale(\${currentScale})\`;
+      video.style.transition = 'transform 0.1s';
+    }
+  });
+
+  videoWrapper.addEventListener('touchend', (e) => {
+    if (e.touches.length === 0 && currentScale !== 1) {
+      // Reset zoom on release
+      setTimeout(() => {
+        video.style.transform = 'scale(1)';
+        video.style.transition = 'transform 0.3s';
+        currentScale = 1;
+      }, 200);
+    }
+  });
+
+  // Helper function to calculate distance between two touch points
+  function getDistance(touch1, touch2) {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+}
+
 // Video: Start camera
 async function startCamera() {
   try {
+    // Detect if mobile for adaptive quality
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const videoConstraints = isMobile ? {
+      width: { ideal: 640, max: 1280 },
+      height: { ideal: 480, max: 720 },
+      frameRate: { ideal: 15, max: 30 }
+    } : {
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+      frameRate: { ideal: 30 }
+    };
+
     localStream = await navigator.mediaDevices.getUserMedia({
-      video: { width: 1280, height: 720 },
-      audio: true
+      video: videoConstraints,
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
     });
 
     // Add local video
@@ -992,6 +1405,9 @@ async function startCamera() {
     localVideoWrapper.appendChild(localVideo);
     localVideoWrapper.appendChild(label);
     videoGrid.insertBefore(localVideoWrapper, videoGrid.firstChild);
+
+    // Add touch controls to local video
+    addVideoTouchControls(localVideoWrapper);
 
     isVideoActive = true;
     startCameraBtn.textContent = '📷 Camera On';
@@ -1264,9 +1680,7 @@ function scrollToBottom() {
 }
 
 // File handling
-fileInput.addEventListener('change', async (e) => {
-  const files = Array.from(e.target.files);
-
+async function handleFiles(files) {
   for (const file of files) {
     const reader = new FileReader();
 
@@ -1283,8 +1697,46 @@ fileInput.addEventListener('change', async (e) => {
 
     reader.readAsDataURL(file);
   }
+}
 
+fileInput.addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files);
+  await handleFiles(files);
   fileInput.value = '';
+});
+
+// Drag and drop functionality
+dragDropZone.addEventListener('click', () => {
+  fileInput.click();
+});
+
+dragDropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dragDropZone.classList.add('dragover');
+});
+
+dragDropZone.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  dragDropZone.classList.remove('dragover');
+});
+
+dragDropZone.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  dragDropZone.classList.remove('dragover');
+
+  const files = Array.from(e.dataTransfer.files);
+  await handleFiles(files);
+});
+
+// Show drag-drop zone on file attach
+let dragDropVisible = false;
+attachButton.addEventListener('click', () => {
+  if (!dragDropVisible) {
+    dragDropZone.classList.add('active');
+    dragDropVisible = true;
+  } else {
+    fileInput.click();
+  }
 });
 
 function updateAttachedFilesPreview() {
@@ -1400,7 +1852,163 @@ screenShareBtn.addEventListener('click', () => {
 
 stopVideoBtn.addEventListener('click', stopCamera);
 
+// Swipe gestures for video panel
+function initializeSwipeGestures() {
+  let touchStartY = 0;
+  let touchEndY = 0;
+  let touchStartX = 0;
+  let touchEndX = 0;
+
+  videoPanel.addEventListener('touchstart', (e) => {
+    touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+
+  videoPanel.addEventListener('touchend', (e) => {
+    touchEndY = e.changedTouches[0].clientY;
+    touchEndX = e.changedTouches[0].clientX;
+    handleSwipe();
+  }, { passive: true });
+
+  function handleSwipe() {
+    const swipeDistanceY = touchStartY - touchEndY;
+    const swipeDistanceX = touchStartX - touchEndX;
+    const minSwipeDistance = 50;
+
+    // Swipe down to close video panel
+    if (swipeDistanceY < -minSwipeDistance && Math.abs(swipeDistanceX) < minSwipeDistance) {
+      if (videoPanel.classList.contains('active')) {
+        videoPanel.classList.remove('active');
+        videoToggleBtn.textContent = '📹 Video';
+      }
+    }
+  }
+}
+
+// Initialize swipe gestures on load
+initializeSwipeGestures();
+
+// Prevent zoom on double-tap for buttons (but allow for videos)
+document.querySelectorAll('button, select, input, textarea').forEach(element => {
+  element.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    e.target.click();
+  }, { passive: false });
+});
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('Service Worker registered:', registration);
+      })
+      .catch(error => {
+        console.log('Service Worker registration failed:', error);
+      });
+  });
+}
+
 // Initialize
 loadModels();
 connect();
 `;
+
+const MANIFEST = JSON.stringify({
+  name: "Ollama Realtime Chat",
+  short_name: "Ollama Chat",
+  description: "Realtime AI chat with multi-model support and video capabilities",
+  start_url: "/",
+  display: "standalone",
+  background_color: "#1a1a1a",
+  theme_color: "#DC143C",
+  orientation: "portrait-primary",
+  icons: [
+    {
+      src: "/icon-192.png",
+      sizes: "192x192",
+      type: "image/png",
+      purpose: "any maskable"
+    },
+    {
+      src: "/icon-512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "any maskable"
+    }
+  ],
+  categories: ["productivity", "social"],
+  screenshots: []
+});
+
+const SERVICE_WORKER = `
+const CACHE_NAME = 'ollama-chat-v1';
+const urlsToCache = [
+  '/',
+  '/app.js',
+  '/manifest.json'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(urlsToCache))
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  // Skip WebSocket requests
+  if (event.request.url.includes('/ws')) {
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request)
+      .then((response) => {
+        if (response) {
+          return response;
+        }
+        return fetch(event.request).then((response) => {
+          // Don't cache if not a valid response
+          if (!response || response.status !== 200 || response.type === 'error') {
+            return response;
+          }
+
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+
+          return response;
+        });
+      })
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
+`;
+
+const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#DC143C;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B8860B;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" fill="url(#grad)" rx="40"/>
+  <text x="96" y="130" font-family="Arial, sans-serif" font-size="100" font-weight="bold" text-anchor="middle" fill="white">AI</text>
+  <circle cx="60" cy="60" r="8" fill="white" opacity="0.8"/>
+  <circle cx="132" cy="60" r="8" fill="white" opacity="0.8"/>
+</svg>`;

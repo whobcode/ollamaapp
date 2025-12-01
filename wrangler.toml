@@ -2,6 +2,14 @@ name = "ollamaapp"
 main = "src/worker.js"
 compatibility_date = "2024-01-01"
 
+[placement]
+mode = "smart"
+
+# Custom domain routes
+[[routes]]
+pattern = "olla.hwmnbn.me/*"
+zone_name = "hwmnbn.me"
+
 [durable_objects]
 bindings = [
   { name = "CHAT_SESSION", class_name = "ChatSession" }
@@ -18,3 +26,15 @@ OLLAMA_HOST = "https://ollama.com"
 
 # Secrets should be set via: wrangler secret put OLLAMA_API_KEY
 # OLLAMA_API_KEY = "..." (set via CLI, not here)
+
+[observability]
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 1
+persist = true
