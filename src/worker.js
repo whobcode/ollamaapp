@@ -94,7 +94,7 @@ const HTML = `<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#DC143C">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Ollama Chat">
   <meta name="description" content="Realtime AI chat with multi-model support and video capabilities">
@@ -216,6 +216,15 @@ const HTML = `<!DOCTYPE html>
       align-items: center;
       gap: 8px;
       font-size: 13px;
+      flex-wrap: wrap;
+    }
+
+    .room-info {
+      font-size: 11px;
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      font-family: monospace;
     }
 
     .status-dot {
@@ -1052,10 +1061,12 @@ const HTML = `<!DOCTYPE html>
           <h1>Ollama Realtime Chat</h1>
           <button class="video-toggle-btn" id="videoToggleBtn">📹 Video</button>
           <button class="video-toggle-btn" id="darkModeToggle">🌙 Dark</button>
+          <button class="video-toggle-btn" id="shareRoomBtn">🔗 Invite</button>
         </div>
         <div class="status">
           <div class="status-dot disconnected" id="statusDot"></div>
           <span id="statusText">Connecting...</span>
+          <span id="roomInfo" class="room-info" style="display:none;"></span>
         </div>
       </div>
       <div class="model-selector">
@@ -1178,6 +1189,8 @@ const dragDropZone = document.getElementById('dragDropZone');
 const darkModeToggle = document.getElementById('darkModeToggle');
 const searchInput = document.getElementById('searchInput');
 const clearSearchBtn = document.getElementById('clearSearchBtn');
+const shareRoomBtn = document.getElementById('shareRoomBtn');
+const roomInfo = document.getElementById('roomInfo');
 
 // Video elements
 const videoToggleBtn = document.getElementById('videoToggleBtn');
@@ -2538,6 +2551,64 @@ searchInput.addEventListener('keydown', (e) => {
 
 clearSearchBtn.addEventListener('click', clearSearch);
 
+// Room sharing functionality
+function generateRoomLink() {
+  const currentUrl = new URL(window.location.href);
+  currentUrl.searchParams.set('room', getSessionId());
+  return currentUrl.toString();
+}
+
+async function shareRoom() {
+  const roomLink = generateRoomLink();
+  const shortId = getSessionId().substring(0, 8);
+
+  // Show room info
+  roomInfo.textContent = \`Room: \${shortId}\`;
+  roomInfo.style.display = 'inline-block';
+
+  try {
+    // Try to use Web Share API (mobile)
+    if (navigator.share) {
+      await navigator.share({
+        title: 'Join Ollama Video Chat',
+        text: 'Join my video chat room!',
+        url: roomLink
+      });
+      addSystemMessage('Room link shared!');
+    } else {
+      // Fallback to clipboard
+      await navigator.clipboard.writeText(roomLink);
+      addSystemMessage(\`Room link copied! Share: \${roomLink}\`);
+    }
+  } catch (error) {
+    // Manual copy fallback
+    const textarea = document.createElement('textarea');
+    textarea.value = roomLink;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    addSystemMessage(\`Room link copied to clipboard!\`);
+  }
+}
+
+// Load room from URL if present
+function loadRoomFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const roomId = params.get('room');
+
+  if (roomId) {
+    localStorage.setItem('ollama_session_id', roomId);
+    sessionId = roomId;
+    const shortId = roomId.substring(0, 8);
+    roomInfo.textContent = \`Room: \${shortId}\`;
+    roomInfo.style.display = 'inline-block';
+    addSystemMessage(\`Joined room: \${shortId}\`);
+  }
+}
+
+shareRoomBtn.addEventListener('click', shareRoom);
+
 // Dark mode toggle event listener
 darkModeToggle.addEventListener('click', toggleDarkMode);
 
@@ -2579,6 +2650,7 @@ function enableLazyLoading(img) {
 
 // Initialize
 initDarkMode();
+loadRoomFromURL();
 loadModels();
 loadConversationHistory();
 connect();

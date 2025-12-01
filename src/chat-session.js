@@ -5,7 +5,12 @@ export class ChatSession {
     this.state = state;
     this.env = env;
     this.sessions = new Map(); // sessionId -> { ws, peerId }
-    this.conversationHistory = [];
+    this.conversationHistory = [
+      {
+        role: 'system',
+        content: 'You are a helpful AI assistant. Always respond in English, regardless of the language of the input. Be concise, accurate, and friendly.'
+      }
+    ];
     this.currentModel = 'deepseek-v3.1:671b-cloud';
   }
 
@@ -101,7 +106,12 @@ export class ChatSession {
         break;
 
       case 'clear':
-        this.conversationHistory = [];
+        this.conversationHistory = [
+          {
+            role: 'system',
+            content: 'You are a helpful AI assistant. Always respond in English, regardless of the language of the input. Be concise, accurate, and friendly.'
+          }
+        ];
         ws.send(JSON.stringify({
           type: 'cleared',
           message: 'Conversation history cleared'
@@ -193,10 +203,15 @@ export class ChatSession {
       }
     }
 
-    // Create the message object - Ollama expects simple string content
+    // If images are present but no text, add a default prompt
+    if (images.length > 0 && textParts.length === 0) {
+      textParts.push('Please describe what you see in this image in detail.');
+    }
+
+    // Create the message object
     const message = {
       role: 'user',
-      content: textParts.join('\n\n')
+      content: textParts.join('\n\n') || 'Hello'
     };
 
     // Add images if present (for vision models)
