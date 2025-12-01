@@ -157,33 +157,25 @@ export class ChatSession {
   }
 
   async handleChat(ws, userMessage, files) {
-    // Build message content
-    const messageContent = [];
+    // Build text content and collect images
+    const textParts = [];
+    const images = [];
 
     // Add text if present
     if (userMessage) {
-      messageContent.push({
-        type: 'text',
-        text: userMessage
-      });
+      textParts.push(userMessage);
     }
 
     // Process attached files
     for (const file of files) {
       if (file.type.startsWith('image/')) {
-        // For vision models, add image in base64 format
-        messageContent.push({
-          type: 'image_url',
-          image_url: {
-            url: file.data
-          }
-        });
+        // For vision models, extract base64 data
+        // Ollama expects just the base64 data without the data URL prefix
+        const base64Data = file.data.split(',')[1];
+        images.push(base64Data);
       } else if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
-        // For audio/video, add as text description for now
-        messageContent.push({
-          type: 'text',
-          text: `[${file.type.startsWith('video/') ? 'Video' : 'Audio'} file attached: ${file.name}]`
-        });
+        // For audio/video, add as text description
+        textParts.push(`[${file.type.startsWith('video/') ? 'Video' : 'Audio'} file attached: ${file.name}]`);
       } else {
         // For documents, try to extract text content
         try {
@@ -191,29 +183,26 @@ export class ChatSession {
           if (file.data.startsWith('data:text/') || file.data.includes('text/plain')) {
             const base64Data = file.data.split(',')[1];
             const textContent = atob(base64Data);
-            messageContent.push({
-              type: 'text',
-              text: `Content of ${file.name}:\\n${textContent}`
-            });
+            textParts.push(`Content of ${file.name}:\n${textContent}`);
           } else {
-            messageContent.push({
-              type: 'text',
-              text: `[Document attached: ${file.name}]`
-            });
+            textParts.push(`[Document attached: ${file.name}]`);
           }
         } catch (error) {
-          messageContent.push({
-            type: 'text',
-            text: `[Document attached: ${file.name}]`
-          });
+          textParts.push(`[Document attached: ${file.name}]`);
         }
       }
     }
 
-    // Create the message object
-    const message = messageContent.length === 1 && messageContent[0].type === 'text'
-      ? { role: 'user', content: messageContent[0].text }
-      : { role: 'user', content: messageContent };
+    // Create the message object - Ollama expects simple string content
+    const message = {
+      role: 'user',
+      content: textParts.join('\n\n')
+    };
+
+    // Add images if present (for vision models)
+    if (images.length > 0) {
+      message.images = images;
+    }
 
     // Add to conversation history
     this.conversationHistory.push(message);
