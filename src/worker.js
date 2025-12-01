@@ -1,20 +1,40 @@
 import { ChatSession } from './chat-session.js';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
 // Export Durable Object class
 export { ChatSession };
+
+// Available models
+const MODELS = [
+  { id: 'deepseek-v3.1:671b-cloud', name: 'DeepSeek V3.1 (671B)', type: 'text' },
+  { id: 'gpt-oss:120b-cloud', name: 'GPT-OSS (120B)', type: 'text' },
+  { id: 'qwen3-vl:235b-instruct-cloud', name: 'Qwen3 VL Instruct (235B)', type: 'vision' },
+  { id: 'qwen3-vl:235b-cloud', name: 'Qwen3 VL (235B)', type: 'vision' },
+  { id: 'qwen3-coder:480b-cloud', name: 'Qwen3 Coder (480B)', type: 'text' },
+  { id: 'glm-4.6:cloud', name: 'GLM 4.6', type: 'text' },
+  { id: 'minimax-m2:cloud', name: 'MiniMax M2', type: 'text' },
+  { id: 'gemini-3-pro-preview:latest', name: 'Gemini 3 Pro Preview', type: 'vision' },
+  { id: 'kimi-k2-thinking:cloud', name: 'Kimi K2 Thinking', type: 'text' },
+  { id: 'cogito-2.1:671b-cloud', name: 'Cogito 2.1 (671B)', type: 'text' },
+  { id: 'kimi-k2:1t-cloud', name: 'Kimi K2 (1T)', type: 'text' }
+];
 
 // Main Worker
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    // API endpoint to get available models
+    if (url.pathname === '/api/models') {
+      return new Response(JSON.stringify(MODELS), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Health check endpoint
     if (url.pathname === '/health') {
       return new Response(JSON.stringify({
         status: 'ok',
-        model: env.MODEL || 'deepseek-v3.1:671b-cloud',
+        models: MODELS.length,
         timestamp: new Date().toISOString()
       }), {
         headers: { 'Content-Type': 'application/json' }
@@ -23,14 +43,9 @@ export default {
 
     // WebSocket upgrade request
     if (url.pathname === '/ws') {
-      // Get session ID from query parameter or generate new one
       const sessionId = url.searchParams.get('session') || crypto.randomUUID();
-
-      // Get Durable Object for this session
       const id = env.CHAT_SESSION.idFromName(sessionId);
       const durableObject = env.CHAT_SESSION.get(id);
-
-      // Forward the request to the Durable Object
       return durableObject.fetch(request);
     }
 
@@ -47,18 +62,16 @@ export default {
       });
     }
 
-    // 404 for everything else
     return new Response('Not Found', { status: 404 });
   }
 };
 
-// Inline HTML (will be replaced with actual content)
 const HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ollama Realtime Chat - DeepSeek V3.1</title>
+  <title>Ollama Realtime Chat - Multi-Model</title>
   <style>
     * {
       margin: 0;
@@ -78,8 +91,8 @@ const HTML = `<!DOCTYPE html>
 
     .container {
       width: 100%;
-      max-width: 900px;
-      height: 90vh;
+      max-width: 1000px;
+      height: 95vh;
       background: white;
       border-radius: 20px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -91,14 +104,18 @@ const HTML = `<!DOCTYPE html>
     .header {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      padding: 20px 30px;
+      padding: 15px 30px;
+    }
+
+    .header-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 12px;
     }
 
     .header h1 {
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 600;
     }
 
@@ -106,12 +123,12 @@ const HTML = `<!DOCTYPE html>
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .status-dot {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: #4ade80;
       animation: pulse 2s infinite;
@@ -123,12 +140,35 @@ const HTML = `<!DOCTYPE html>
     }
 
     @keyframes pulse {
-      0%, 100% {
-        opacity: 1;
-      }
-      50% {
-        opacity: 0.5;
-      }
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .model-selector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .model-selector label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .model-selector select {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      min-width: 200px;
+    }
+
+    .model-selector select option {
+      background: #667eea;
+      color: white;
     }
 
     .chat-container {
@@ -165,13 +205,14 @@ const HTML = `<!DOCTYPE html>
     }
 
     .message-avatar {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 600;
+      font-size: 13px;
       color: white;
       flex-shrink: 0;
     }
@@ -192,6 +233,7 @@ const HTML = `<!DOCTYPE html>
       line-height: 1.6;
       white-space: pre-wrap;
       word-wrap: break-word;
+      max-width: 100%;
     }
 
     .message.user .message-content {
@@ -199,12 +241,40 @@ const HTML = `<!DOCTYPE html>
       color: white;
     }
 
+    .attached-files {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .file-badge {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .file-badge-icon {
+      font-size: 14px;
+    }
+
+    .attached-image {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+
     .system-message {
       text-align: center;
       padding: 12px;
       background: #e0e7ff;
       border-radius: 12px;
-      font-size: 14px;
+      font-size: 13px;
       color: #4338ca;
       align-self: center;
     }
@@ -244,6 +314,40 @@ const HTML = `<!DOCTYPE html>
       padding: 20px 30px;
       background: white;
       border-top: 1px solid #e5e7eb;
+    }
+
+    .attached-files-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .attached-file-item {
+      background: #f3f4f6;
+      padding: 8px 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .remove-file {
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .input-row {
       display: flex;
       gap: 12px;
     }
@@ -258,7 +362,7 @@ const HTML = `<!DOCTYPE html>
       padding: 14px 20px;
       border: 2px solid #e5e7eb;
       border-radius: 12px;
-      font-size: 16px;
+      font-size: 15px;
       font-family: inherit;
       transition: border-color 0.3s;
       resize: none;
@@ -272,14 +376,15 @@ const HTML = `<!DOCTYPE html>
     }
 
     button {
-      padding: 14px 24px;
+      padding: 12px 20px;
       border: none;
       border-radius: 12px;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s;
       color: white;
+      white-space: nowrap;
     }
 
     #sendButton {
@@ -294,6 +399,14 @@ const HTML = `<!DOCTYPE html>
     #sendButton:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    #attachButton {
+      background: #10b981;
+    }
+
+    #attachButton:hover {
+      background: #059669;
     }
 
     #clearButton {
@@ -312,36 +425,55 @@ const HTML = `<!DOCTYPE html>
     .hidden {
       display: none;
     }
+
+    #fileInput {
+      display: none;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>Ollama Realtime Chat</h1>
-      <div class="status">
-        <div class="status-dot disconnected" id="statusDot"></div>
-        <span id="statusText">Connecting...</span>
+      <div class="header-top">
+        <h1>Ollama Realtime Chat</h1>
+        <div class="status">
+          <div class="status-dot disconnected" id="statusDot"></div>
+          <span id="statusText">Connecting...</span>
+        </div>
+      </div>
+      <div class="model-selector">
+        <label for="modelSelect">Model:</label>
+        <select id="modelSelect">
+          <option value="">Loading models...</option>
+        </select>
       </div>
     </div>
 
     <div class="chat-container" id="chatContainer">
       <div class="system-message">
-        Welcome to Ollama Realtime Chat powered by DeepSeek V3.1
+        Welcome to Ollama Realtime Chat - Multi-Model Edition
       </div>
     </div>
 
     <div class="input-container">
-      <div class="input-wrapper">
-        <textarea
-          id="messageInput"
-          placeholder="Type your message..."
-          rows="1"
-        ></textarea>
+      <div id="attachedFilesPreview" class="attached-files-preview"></div>
+
+      <div class="input-row">
+        <div class="input-wrapper">
+          <textarea
+            id="messageInput"
+            placeholder="Type your message or attach files..."
+            rows="1"
+          ></textarea>
+        </div>
+        <div class="controls">
+          <button id="attachButton" title="Attach files (images, documents, audio, video)">📎 Attach</button>
+          <button id="sendButton" disabled>Send</button>
+          <button id="clearButton">Clear</button>
+        </div>
       </div>
-      <div class="controls">
-        <button id="sendButton" disabled>Send</button>
-        <button id="clearButton">Clear</button>
-      </div>
+
+      <input type="file" id="fileInput" multiple accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx,.json,.csv,.md">
     </div>
   </div>
 
@@ -354,14 +486,42 @@ let ws = null;
 let isStreaming = false;
 let currentAssistantMessage = null;
 let sessionId = null;
+let selectedModel = 'deepseek-v3.1:671b-cloud';
+let attachedFiles = [];
+let availableModels = [];
 
 // DOM elements
 const chatContainer = document.getElementById('chatContainer');
 const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
 const clearButton = document.getElementById('clearButton');
+const attachButton = document.getElementById('attachButton');
+const fileInput = document.getElementById('fileInput');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
+const modelSelect = document.getElementById('modelSelect');
+const attachedFilesPreview = document.getElementById('attachedFilesPreview');
+
+// Load available models
+async function loadModels() {
+  try {
+    const response = await fetch('/api/models');
+    availableModels = await response.json();
+
+    modelSelect.innerHTML = '';
+    availableModels.forEach(model => {
+      const option = document.createElement('option');
+      option.value = model.id;
+      option.textContent = model.name + (model.type === 'vision' ? ' 👁️' : '');
+      modelSelect.appendChild(option);
+    });
+
+    modelSelect.value = selectedModel;
+  } catch (error) {
+    console.error('Error loading models:', error);
+    modelSelect.innerHTML = '<option>Error loading models</option>';
+  }
+}
 
 // Get or create session ID
 function getSessionId() {
@@ -403,7 +563,6 @@ function connect() {
     updateStatus('disconnected', 'Disconnected');
     sendButton.disabled = true;
 
-    // Attempt to reconnect after 3 seconds
     setTimeout(() => {
       console.log('Attempting to reconnect...');
       connect();
@@ -440,7 +599,6 @@ function handleMessage(data) {
         currentAssistantMessage = addMessage('assistant', '');
       }
 
-      // Append streamed content
       currentAssistantMessage.textContent += data.content;
       scrollToBottom();
       break;
@@ -467,7 +625,7 @@ function handleMessage(data) {
 }
 
 // Add message to chat
-function addMessage(role, content) {
+function addMessage(role, content, files = []) {
   const messageDiv = document.createElement('div');
   messageDiv.className = \`message \${role}\`;
 
@@ -479,6 +637,34 @@ function addMessage(role, content) {
   messageContent.className = 'message-content';
   messageContent.textContent = content;
 
+  // Add file attachments display
+  if (files && files.length > 0) {
+    const filesDiv = document.createElement('div');
+    filesDiv.className = 'attached-files';
+
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = file.data;
+        img.className = 'attached-image';
+        img.alt = file.name;
+        messageContent.appendChild(img);
+      } else {
+        const badge = document.createElement('div');
+        badge.className = 'file-badge';
+        badge.innerHTML = \`
+          <span class="file-badge-icon">\${getFileIcon(file.type)}</span>
+          <span>\${file.name}</span>
+        \`;
+        filesDiv.appendChild(badge);
+      }
+    });
+
+    if (filesDiv.children.length > 0) {
+      messageContent.appendChild(filesDiv);
+    }
+  }
+
   messageDiv.appendChild(avatar);
   messageDiv.appendChild(messageContent);
 
@@ -486,6 +672,16 @@ function addMessage(role, content) {
   scrollToBottom();
 
   return messageContent;
+}
+
+// Get file icon based on type
+function getFileIcon(type) {
+  if (type.startsWith('image/')) return '🖼️';
+  if (type.startsWith('video/')) return '🎥';
+  if (type.startsWith('audio/')) return '🎵';
+  if (type.includes('pdf')) return '📄';
+  if (type.includes('text')) return '📝';
+  return '📎';
 }
 
 // Add system message
@@ -537,23 +733,87 @@ function scrollToBottom() {
   chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
+// Handle file selection
+fileInput.addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files);
+
+  for (const file of files) {
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      attachedFiles.push({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        data: event.target.result
+      });
+
+      updateAttachedFilesPreview();
+    };
+
+    // Read as data URL for all files
+    reader.readAsDataURL(file);
+  }
+
+  // Reset file input
+  fileInput.value = '';
+});
+
+// Update attached files preview
+function updateAttachedFilesPreview() {
+  attachedFilesPreview.innerHTML = '';
+
+  attachedFiles.forEach((file, index) => {
+    const fileItem = document.createElement('div');
+    fileItem.className = 'attached-file-item';
+
+    fileItem.innerHTML = \`
+      <span>\${getFileIcon(file.type)}</span>
+      <span>\${file.name}</span>
+      <button class="remove-file" data-index="\${index}">✕</button>
+    \`;
+
+    attachedFilesPreview.appendChild(fileItem);
+  });
+
+  // Add remove handlers
+  document.querySelectorAll('.remove-file').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const index = parseInt(e.target.getAttribute('data-index'));
+      attachedFiles.splice(index, 1);
+      updateAttachedFilesPreview();
+    });
+  });
+}
+
 // Send message
 function sendMessage() {
   const message = messageInput.value.trim();
 
-  if (!message || !ws || ws.readyState !== WebSocket.OPEN) {
+  if ((!message && attachedFiles.length === 0) || !ws || ws.readyState !== WebSocket.OPEN) {
     return;
   }
 
-  addMessage('user', message);
+  // Add user message to chat with files
+  addMessage('user', message || '(files attached)', [...attachedFiles]);
 
+  // Send to server
   ws.send(JSON.stringify({
     type: 'chat',
-    content: message
+    content: message,
+    model: selectedModel,
+    files: attachedFiles.map(f => ({
+      name: f.name,
+      type: f.type,
+      data: f.data
+    }))
   }));
 
+  // Clear input and files
   messageInput.value = '';
   messageInput.style.height = 'auto';
+  attachedFiles = [];
+  updateAttachedFilesPreview();
 }
 
 // Clear conversation
@@ -579,6 +839,12 @@ messageInput.addEventListener('input', () => {
 // Event listeners
 sendButton.addEventListener('click', sendMessage);
 clearButton.addEventListener('click', clearConversation);
+attachButton.addEventListener('click', () => fileInput.click());
+
+modelSelect.addEventListener('change', (e) => {
+  selectedModel = e.target.value;
+  addSystemMessage(\`Switched to model: \${e.target.options[e.target.selectedIndex].text}\`);
+});
 
 messageInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) {
@@ -587,6 +853,7 @@ messageInput.addEventListener('keydown', (e) => {
   }
 });
 
-// Initialize connection
+// Initialize
+loadModels();
 connect();
 `;
