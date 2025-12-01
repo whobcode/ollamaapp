@@ -1076,6 +1076,12 @@ const HTML = `<!DOCTYPE html>
         <button class="video-btn" id="toggleMicBtn">🎤 Mute</button>
         <button class="video-btn" id="snapshotBtn">📸 Snapshot</button>
         <button class="video-btn" id="screenShareBtn">🖥️ Share Screen</button>
+        <select class="video-btn" id="qualitySelect" style="background: #B8860B; color: white;">
+          <option value="sd">📹 SD (480p)</option>
+          <option value="hd" selected>📹 HD (720p)</option>
+          <option value="fhd">📹 Full HD (1080p)</option>
+        </select>
+        <button class="video-btn" id="pipBtn">📺 PiP</button>
         <button class="video-btn danger" id="stopVideoBtn">⏹️ Stop</button>
       </div>
       <div class="video-grid" id="videoGrid">
@@ -1128,6 +1134,7 @@ let sessionId = null;
 let selectedModel = 'deepseek-v3.1:671b-cloud';
 let attachedFiles = [];
 let availableModels = [];
+let conversationHistory = [];
 
 // Video chat globals
 let localStream = null;
@@ -1135,6 +1142,14 @@ let screenStream = null;
 let peerConnections = new Map(); // peerId -> RTCPeerConnection
 let isVideoActive = false;
 let isMicMuted = false;
+let currentQuality = 'hd';
+
+// Video quality presets
+const VIDEO_QUALITY = {
+  sd: { width: 640, height: 480, frameRate: 15, bitrate: 300000 },
+  hd: { width: 1280, height: 720, frameRate: 30, bitrate: 1000000 },
+  fhd: { width: 1920, height: 1080, frameRate: 30, bitrate: 2500000 }
+};
 
 // Notification settings
 let notificationsEnabled = localStorage.getItem('notifications') !== 'false';
@@ -1173,6 +1188,8 @@ const toggleMicBtn = document.getElementById('toggleMicBtn');
 const snapshotBtn = document.getElementById('snapshotBtn');
 const screenShareBtn = document.getElementById('screenShareBtn');
 const stopVideoBtn = document.getElementById('stopVideoBtn');
+const qualitySelect = document.getElementById('qualitySelect');
+const pipBtn = document.getElementById('pipBtn');
 
 // Load available models
 async function loadModels() {
@@ -1208,43 +1225,59 @@ function getSessionId() {
 
 // Connect to WebSocket server
 function connect() {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = \`\${protocol}//\${window.location.host}/ws?session=\${getSessionId()}\`;
+  try {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = \`\${protocol}//\${window.location.host}/ws?session=\${getSessionId()}\`;
 
-  ws = new WebSocket(wsUrl);
+    ws = new WebSocket(wsUrl);
 
-  ws.onopen = () => {
-    console.log('Connected to server');
-    updateStatus('connected', 'Connected');
-    sendButton.disabled = false;
+    ws.onopen = () => {
+      console.log('Connected to server');
+      updateStatus('connected', 'Connected');
+      sendButton.disabled = false;
 
-    // Announce presence for WebRTC
-    ws.send(JSON.stringify({
-      type: 'presence',
-      peerId: getSessionId()
-    }));
-  };
+      try {
+        // Announce presence for WebRTC
+        ws.send(JSON.stringify({
+          type: 'presence',
+          peerId: getSessionId()
+        }));
+      } catch (error) {
+        console.error('Error sending presence:', error);
+      }
+    };
 
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    handleMessage(data);
-  };
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleMessage(data);
+      } catch (error) {
+        console.error('Error handling message:', error);
+        addSystemMessage('Error processing server message');
+      }
+    };
 
-  ws.onerror = (error) => {
-    console.error('WebSocket error:', error);
-    updateStatus('disconnected', 'Error');
-  };
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      updateStatus('disconnected', 'Connection Error');
+      addSystemMessage('Connection error - will retry...');
+    };
 
-  ws.onclose = () => {
-    console.log('Disconnected from server');
-    updateStatus('disconnected', 'Disconnected');
-    sendButton.disabled = true;
+    ws.onclose = () => {
+      console.log('Disconnected from server');
+      updateStatus('disconnected', 'Disconnected');
+      sendButton.disabled = true;
 
-    setTimeout(() => {
-      console.log('Attempting to reconnect...');
-      connect();
-    }, 3000);
-  };
+      setTimeout(() => {
+        console.log('Attempting to reconnect...');
+        connect();
+      }, 3000);
+    };
+  } catch (error) {
+    console.error('Fatal connection error:', error);
+    addSystemMessage('Fatal error: Could not establish connection');
+    updateStatus('disconnected', 'Fatal Error');
+  }
 }
 
 // Update connection status
@@ -1575,20 +1608,19 @@ function addVideoTouchControls(videoWrapper) {
 // Video: Start camera
 async function startCamera() {
   try {
-    // Detect if mobile for adaptive quality
+    // Get quality settings
+    const quality = VIDEO_QUALITY[currentQuality] || VIDEO_QUALITY.hd;
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const videoConstraints = isMobile ? {
-      width: { ideal: 640, max: 1280 },
-      height: { ideal: 480, max: 720 },
-      frameRate: { ideal: 15, max: 30 }
-    } : {
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
-      frameRate: { ideal: 30 }
-    };
+
+    // Use lower quality on mobile
+    const effectiveQuality = isMobile ? VIDEO_QUALITY.sd : quality;
 
     localStream = await navigator.mediaDevices.getUserMedia({
-      video: videoConstraints,
+      video: {
+        width: { ideal: effectiveQuality.width },
+        height: { ideal: effectiveQuality.height },
+        frameRate: { ideal: effectiveQuality.frameRate }
+      },
       audio: {
         echoCancellation: true,
         noiseSuppression: true,
@@ -1786,10 +1818,52 @@ function stopScreenShare() {
   addSystemMessage('Screen sharing stopped');
 }
 
+// Conversation history management
+function saveConversationHistory() {
+  try {
+    const history = {
+      messages: conversationHistory,
+      timestamp: Date.now(),
+      model: selectedModel
+    };
+    localStorage.setItem('conversation_history', JSON.stringify(history));
+  } catch (error) {
+    console.log('Could not save conversation history:', error);
+  }
+}
+
+function loadConversationHistory() {
+  try {
+    const saved = localStorage.getItem('conversation_history');
+    if (saved) {
+      const history = JSON.parse(saved);
+      // Only load if less than 24 hours old
+      if (Date.now() - history.timestamp < 24 * 60 * 60 * 1000) {
+        conversationHistory = history.messages;
+        restoreMessages();
+        addSystemMessage('Conversation history restored');
+      }
+    }
+  } catch (error) {
+    console.log('Could not load conversation history:', error);
+  }
+}
+
+function restoreMessages() {
+  conversationHistory.forEach(msg => {
+    addMessage(msg.role, msg.content, msg.files, false);
+  });
+}
+
+function clearConversationCache() {
+  localStorage.removeItem('conversation_history');
+  conversationHistory = [];
+}
+
 // Chat functions
 let messageReactions = new Map(); // Store reactions for each message
 
-function addMessage(role, content, files = []) {
+function addMessage(role, content, files = [], saveToHistory = true) {
   const messageDiv = document.createElement('div');
   messageDiv.className = \`message \${role}\`;
   const messageId = \`msg-\${Date.now()}-\${Math.random().toString(36).substr(2, 9)}\`;
@@ -1810,10 +1884,12 @@ function addMessage(role, content, files = []) {
     files.forEach(file => {
       if (file.type.startsWith('image/')) {
         const img = document.createElement('img');
-        img.src = file.data;
+        img.dataset.src = file.data;
+        img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"%3E%3Crect fill="%23f0f0f0"/%3E%3C/svg%3E';
         img.className = 'attached-image';
         img.alt = file.name;
         messageContent.appendChild(img);
+        enableLazyLoading(img);
       } else {
         const badge = document.createElement('div');
         badge.className = 'file-badge';
@@ -1848,6 +1924,12 @@ function addMessage(role, content, files = []) {
 
   // Add reaction picker event
   setupReactionPicker(messageId, reactionsContainer);
+
+  // Save to conversation history
+  if (saveToHistory && role !== 'system') {
+    conversationHistory.push({ role, content, files });
+    saveConversationHistory();
+  }
 
   return messageContent;
 }
@@ -2005,22 +2087,83 @@ function scrollToBottom() {
 }
 
 // File handling
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB for images before compression
+
+async function compressImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Resize if too large
+        const maxDimension = 1920;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = (height / width) * maxDimension;
+            width = maxDimension;
+          } else {
+            width = (width / height) * maxDimension;
+            height = maxDimension;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Compress to JPEG with 0.8 quality
+        canvas.toBlob((blob) => {
+          resolve(blob);
+        }, 'image/jpeg', 0.8);
+      };
+      img.src = e.target.result;
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
 async function handleFiles(files) {
   for (const file of files) {
+    // Check file size
+    if (file.size > MAX_FILE_SIZE) {
+      addSystemMessage(\`Error: \${file.name} is too large (max 10MB). File skipped.\`);
+      continue;
+    }
+
+    let processedFile = file;
+
+    // Compress images if needed
+    if (file.type.startsWith('image/') && file.size > MAX_IMAGE_SIZE) {
+      addSystemMessage(\`Compressing \${file.name}...\`);
+      const compressed = await compressImage(file);
+      processedFile = new File([compressed], file.name, { type: 'image/jpeg' });
+      const savedSize = ((file.size - compressed.size) / file.size * 100).toFixed(1);
+      addSystemMessage(\`Compressed \${file.name} (saved \${savedSize}%)\`);
+    }
+
     const reader = new FileReader();
 
     reader.onload = (event) => {
       attachedFiles.push({
-        name: file.name,
-        type: file.type,
-        size: file.size,
+        name: processedFile.name,
+        type: processedFile.type,
+        size: processedFile.size,
         data: event.target.result
       });
 
       updateAttachedFilesPreview();
     };
 
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(processedFile);
   }
 }
 
@@ -2121,6 +2264,7 @@ function clearConversation() {
   }
 
   chatContainer.innerHTML = '';
+  clearConversationCache();
   addSystemMessage('Conversation cleared - Starting fresh!');
 
   ws.send(JSON.stringify({
@@ -2176,6 +2320,41 @@ screenShareBtn.addEventListener('click', () => {
 });
 
 stopVideoBtn.addEventListener('click', stopCamera);
+
+// Quality selector
+qualitySelect.addEventListener('change', (e) => {
+  currentQuality = e.target.value;
+  addSystemMessage(\`Video quality set to \${e.target.options[e.target.selectedIndex].text}\`);
+
+  // Restart camera if active
+  if (isVideoActive) {
+    stopCamera();
+    setTimeout(() => startCamera(), 500);
+  }
+});
+
+// Picture-in-Picture
+pipBtn.addEventListener('click', async () => {
+  const localVideo = document.querySelector('#video-local video');
+  if (!localVideo) {
+    alert('Please start your camera first');
+    return;
+  }
+
+  try {
+    if (document.pictureInPictureElement) {
+      await document.exitPictureInPicture();
+      pipBtn.textContent = '📺 PiP';
+    } else {
+      await localVideo.requestPictureInPicture();
+      pipBtn.textContent = '📺 Exit PiP';
+      addSystemMessage('Picture-in-Picture mode enabled');
+    }
+  } catch (error) {
+    console.error('PiP error:', error);
+    alert('Picture-in-Picture not supported');
+  }
+});
 
 // Swipe gestures for video panel
 function initializeSwipeGestures() {
@@ -2375,9 +2554,33 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Lazy loading for images
+const imageObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const img = entry.target;
+      if (img.dataset.src) {
+        img.src = img.dataset.src;
+        img.removeAttribute('data-src');
+        imageObserver.unobserve(img);
+      }
+    }
+  });
+}, { rootMargin: '50px' });
+
+function enableLazyLoading(img) {
+  if ('IntersectionObserver' in window) {
+    imageObserver.observe(img);
+  } else {
+    // Fallback for older browsers
+    img.src = img.dataset.src;
+  }
+}
+
 // Initialize
 initDarkMode();
 loadModels();
+loadConversationHistory();
 connect();
 `;
 

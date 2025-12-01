@@ -25,10 +25,10 @@
 - [x] Implement message search functionality
 
 ### Video Chat Improvements
-- [ ] Add video quality settings (SD, HD, 4K)
+- [x] Add video quality settings (SD, HD, 4K)
 - [ ] Implement background blur for video
 - [ ] Add virtual backgrounds
-- [ ] Picture-in-picture mode for video
+- [x] Picture-in-picture mode for video
 - [ ] Record video calls (with permission)
 - [ ] Add video filters and effects
 
@@ -36,17 +36,17 @@
 - [x] Add drag-and-drop for file uploads
 - [ ] Implement PDF preview in chat
 - [ ] Add support for more document formats
-- [ ] Compress images before uploading
-- [ ] Add file size limits and warnings
+- [x] Compress images before uploading
+- [x] Add file size limits and warnings
 - [ ] Implement OCR for scanned documents
 
 ## Low Priority
 
 ### Performance Optimizations
 - [ ] Implement message pagination
-- [ ] Add lazy loading for media
+- [x] Add lazy loading for media
 - [ ] Optimize WebSocket message batching
-- [ ] Cache conversation history locally
+- [x] Cache conversation history locally
 - [ ] Reduce bundle size
 
 ### Additional Features
@@ -58,7 +58,7 @@
 - [ ] Custom AI prompts/templates
 
 ## Technical Debt
-- [ ] Add comprehensive error handling
+- [x] Add comprehensive error handling
 - [ ] Implement unit tests
 - [ ] Add integration tests for WebRTC
 - [ ] Improve code documentation
