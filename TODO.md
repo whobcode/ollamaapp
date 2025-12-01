@@ -17,12 +17,12 @@
 ## Medium Priority
 
 ### UI/UX Enhancements
-- [ ] Add dark mode toggle
-- [ ] Implement message reactions
-- [ ] Add typing indicators for other users
-- [ ] Improve error messages and user feedback
-- [ ] Add notification sounds for new messages
-- [ ] Implement message search functionality
+- [x] Add dark mode toggle
+- [x] Implement message reactions
+- [x] Add typing indicators for other users
+- [x] Improve error messages and user feedback
+- [x] Add notification sounds for new messages
+- [x] Implement message search functionality
 
 ### Video Chat Improvements
 - [ ] Add video quality settings (SD, HD, 4K)
@@ -33,7 +33,7 @@
 - [ ] Add video filters and effects
 
 ### File Handling
-- [ ] Add drag-and-drop for file uploads
+- [x] Add drag-and-drop for file uploads
 - [ ] Implement PDF preview in chat
 - [ ] Add support for more document formats
 - [ ] Compress images before uploading

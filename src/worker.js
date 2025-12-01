@@ -103,6 +103,44 @@ const HTML = `<!DOCTYPE html>
   <link rel="apple-touch-icon" href="/favicon.ico">
   <title>Ollama Realtime Chat - Multi-Model with Video</title>
   <style>
+    :root {
+      --bg-gradient-start: #1a1a1a;
+      --bg-gradient-end: #2d1a1a;
+      --container-bg: white;
+      --text-primary: #000000;
+      --text-secondary: #6b7280;
+      --chat-bg: #f9fafb;
+      --message-bg: white;
+      --user-message-bg: linear-gradient(135deg, #DC143C 0%, #8B0000 100%);
+      --input-bg: white;
+      --input-border: #e5e7eb;
+      --input-border-focus: #B8860B;
+      --header-bg: linear-gradient(135deg, #DC143C 0%, #B8860B 100%);
+      --system-message-bg: #2d2416;
+      --system-message-text: #B8860B;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --border-color: #e5e7eb;
+    }
+
+    [data-theme="dark"] {
+      --bg-gradient-start: #0a0a0a;
+      --bg-gradient-end: #1a0a0a;
+      --container-bg: #1e1e1e;
+      --text-primary: #e5e5e5;
+      --text-secondary: #a0a0a0;
+      --chat-bg: #262626;
+      --message-bg: #2d2d2d;
+      --user-message-bg: linear-gradient(135deg, #DC143C 0%, #8B0000 100%);
+      --input-bg: #2d2d2d;
+      --input-border: #3d3d3d;
+      --input-border-focus: #B8860B;
+      --header-bg: linear-gradient(135deg, #DC143C 0%, #B8860B 100%);
+      --system-message-bg: #1a1410;
+      --system-message-text: #B8860B;
+      --shadow: rgba(0, 0, 0, 0.3);
+      --border-color: #3d3d3d;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -111,28 +149,31 @@ const HTML = `<!DOCTYPE html>
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: linear-gradient(135deg, #1a1a1a 0%, #2d1a1a 100%);
+      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
       height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
       padding: 20px;
+      color: var(--text-primary);
+      transition: background 0.3s ease;
     }
 
     .container {
       width: 100%;
       max-width: 1200px;
       height: 95vh;
-      background: white;
+      background: var(--container-bg);
       border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 20px 60px var(--shadow);
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      transition: background 0.3s ease;
     }
 
     .header {
-      background: linear-gradient(135deg, #DC143C 0%, #B8860B 100%);
+      background: var(--header-bg);
       color: white;
       padding: 15px 30px;
     }
@@ -220,6 +261,69 @@ const HTML = `<!DOCTYPE html>
     .model-selector select option {
       background: #DC143C;
       color: white;
+    }
+
+    .search-container {
+      position: relative;
+      margin-top: 10px;
+    }
+
+    #searchInput {
+      width: 100%;
+      padding: 8px 35px 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border-radius: 8px;
+      font-size: 13px;
+      transition: all 0.3s;
+    }
+
+    #searchInput::placeholder {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    #searchInput:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .clear-search-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .clear-search-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .search-highlight {
+      background: #FFD700;
+      color: #000;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
+    .message.search-match {
+      box-shadow: 0 0 0 2px #B8860B;
+      animation: highlightPulse 0.5s ease-in-out;
+    }
+
+    @keyframes highlightPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
     }
 
     /* Video Panel */
@@ -335,7 +439,8 @@ const HTML = `<!DOCTYPE html>
       display: flex;
       flex-direction: column;
       gap: 20px;
-      background: #f9fafb;
+      background: var(--chat-bg);
+      transition: background 0.3s ease;
     }
 
     .message {
@@ -383,18 +488,20 @@ const HTML = `<!DOCTYPE html>
     }
 
     .message-content {
-      background: white;
+      background: var(--message-bg);
       padding: 12px 16px;
       border-radius: 16px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px var(--shadow);
       line-height: 1.6;
       white-space: pre-wrap;
       word-wrap: break-word;
       max-width: 100%;
+      color: var(--text-primary);
+      transition: all 0.3s ease;
     }
 
     .message.user .message-content {
-      background: linear-gradient(135deg, #DC143C 0%, #8B0000 100%);
+      background: var(--user-message-bg);
       color: white;
     }
 
@@ -422,14 +529,98 @@ const HTML = `<!DOCTYPE html>
       margin-top: 8px;
     }
 
+    .message-reactions {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .reaction {
+      background: var(--chat-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .reaction:hover {
+      transform: scale(1.1);
+      background: var(--system-message-bg);
+    }
+
+    .reaction.active {
+      background: var(--system-message-text);
+      color: white;
+      border-color: var(--system-message-text);
+    }
+
+    .reaction-count {
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    .add-reaction-btn {
+      background: transparent;
+      border: 1px dashed var(--border-color);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      opacity: 0.6;
+    }
+
+    .add-reaction-btn:hover {
+      opacity: 1;
+      background: var(--chat-bg);
+    }
+
+    .reaction-picker {
+      position: absolute;
+      background: var(--container-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 4px 12px var(--shadow);
+      display: none;
+      gap: 4px;
+      z-index: 1000;
+      margin-top: 4px;
+    }
+
+    .reaction-picker.active {
+      display: flex;
+    }
+
+    .reaction-option {
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .reaction-option:hover {
+      background: var(--chat-bg);
+      transform: scale(1.2);
+    }
+
     .system-message {
       text-align: center;
       padding: 12px;
-      background: #2d2416;
+      background: var(--system-message-bg);
       border-radius: 12px;
       font-size: 13px;
-      color: #B8860B;
+      color: var(--system-message-text);
       align-self: center;
+      transition: all 0.3s ease;
     }
 
     .typing-indicator {
@@ -465,8 +656,9 @@ const HTML = `<!DOCTYPE html>
 
     .input-container {
       padding: 20px 30px;
-      background: white;
-      border-top: 1px solid #e5e7eb;
+      background: var(--container-bg);
+      border-top: 1px solid var(--border-color);
+      transition: all 0.3s ease;
     }
 
     .attached-files-preview {
@@ -477,13 +669,15 @@ const HTML = `<!DOCTYPE html>
     }
 
     .attached-file-item {
-      background: #f3f4f6;
+      background: var(--chat-bg);
       padding: 8px 12px;
       border-radius: 8px;
       display: flex;
       align-items: center;
       gap: 8px;
       font-size: 13px;
+      color: var(--text-primary);
+      transition: all 0.3s ease;
     }
 
     .remove-file {
@@ -513,19 +707,21 @@ const HTML = `<!DOCTYPE html>
     #messageInput {
       width: 100%;
       padding: 14px 20px;
-      border: 2px solid #e5e7eb;
+      border: 2px solid var(--input-border);
       border-radius: 12px;
       font-size: 15px;
       font-family: inherit;
-      transition: border-color 0.3s;
+      transition: all 0.3s;
       resize: none;
       min-height: 50px;
       max-height: 120px;
+      background: var(--input-bg);
+      color: var(--text-primary);
     }
 
     #messageInput:focus {
       outline: none;
-      border-color: #B8860B;
+      border-color: var(--input-border-focus);
     }
 
     button {
@@ -855,6 +1051,7 @@ const HTML = `<!DOCTYPE html>
         <div class="header-left">
           <h1>Ollama Realtime Chat</h1>
           <button class="video-toggle-btn" id="videoToggleBtn">📹 Video</button>
+          <button class="video-toggle-btn" id="darkModeToggle">🌙 Dark</button>
         </div>
         <div class="status">
           <div class="status-dot disconnected" id="statusDot"></div>
@@ -866,6 +1063,10 @@ const HTML = `<!DOCTYPE html>
         <select id="modelSelect">
           <option value="">Loading models...</option>
         </select>
+      </div>
+      <div class="search-container">
+        <input type="text" id="searchInput" placeholder="🔍 Search messages...">
+        <button id="clearSearchBtn" class="clear-search-btn" style="display: none;">✕</button>
       </div>
     </div>
 
@@ -935,6 +1136,10 @@ let peerConnections = new Map(); // peerId -> RTCPeerConnection
 let isVideoActive = false;
 let isMicMuted = false;
 
+// Notification settings
+let notificationsEnabled = localStorage.getItem('notifications') !== 'false';
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
 // ICE servers configuration
 const ICE_SERVERS = {
   iceServers: [
@@ -955,6 +1160,9 @@ const statusText = document.getElementById('statusText');
 const modelSelect = document.getElementById('modelSelect');
 const attachedFilesPreview = document.getElementById('attachedFilesPreview');
 const dragDropZone = document.getElementById('dragDropZone');
+const darkModeToggle = document.getElementById('darkModeToggle');
+const searchInput = document.getElementById('searchInput');
+const clearSearchBtn = document.getElementById('clearSearchBtn');
 
 // Video elements
 const videoToggleBtn = document.getElementById('videoToggleBtn');
@@ -1065,6 +1273,7 @@ async function handleMessage(data) {
       hideTypingIndicator();
       if (!currentAssistantMessage) {
         currentAssistantMessage = addMessage('assistant', '');
+        playNotificationSound(); // Play sound when AI starts responding
       }
       currentAssistantMessage.textContent += data.content;
       scrollToBottom();
@@ -1578,9 +1787,13 @@ function stopScreenShare() {
 }
 
 // Chat functions
+let messageReactions = new Map(); // Store reactions for each message
+
 function addMessage(role, content, files = []) {
   const messageDiv = document.createElement('div');
   messageDiv.className = \`message \${role}\`;
+  const messageId = \`msg-\${Date.now()}-\${Math.random().toString(36).substr(2, 9)}\`;
+  messageDiv.setAttribute('data-message-id', messageId);
 
   const avatar = document.createElement('div');
   avatar.className = 'message-avatar';
@@ -1617,13 +1830,125 @@ function addMessage(role, content, files = []) {
     }
   }
 
+  // Add reactions container
+  const reactionsContainer = document.createElement('div');
+  reactionsContainer.className = 'message-reactions';
+  reactionsContainer.innerHTML = \`
+    <button class="add-reaction-btn" data-message-id="\${messageId}">➕</button>
+  \`;
+  messageContent.appendChild(reactionsContainer);
+
   messageDiv.appendChild(avatar);
   messageDiv.appendChild(messageContent);
   chatContainer.appendChild(messageDiv);
   scrollToBottom();
 
+  // Initialize reactions for this message
+  messageReactions.set(messageId, {});
+
+  // Add reaction picker event
+  setupReactionPicker(messageId, reactionsContainer);
+
   return messageContent;
 }
+
+// Reaction picker setup
+const availableReactions = ['👍', '❤️', '😂', '😮', '🎉', '🚀', '👏', '🔥'];
+let activeReactionPicker = null;
+
+function setupReactionPicker(messageId, container) {
+  const addBtn = container.querySelector('.add-reaction-btn');
+
+  addBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    // Close any existing picker
+    if (activeReactionPicker) {
+      activeReactionPicker.remove();
+      activeReactionPicker = null;
+    }
+
+    // Create reaction picker
+    const picker = document.createElement('div');
+    picker.className = 'reaction-picker active';
+
+    availableReactions.forEach(emoji => {
+      const option = document.createElement('span');
+      option.className = 'reaction-option';
+      option.textContent = emoji;
+      option.addEventListener('click', (e) => {
+        e.stopPropagation();
+        addReaction(messageId, emoji);
+        picker.remove();
+        activeReactionPicker = null;
+      });
+      picker.appendChild(option);
+    });
+
+    container.appendChild(picker);
+    activeReactionPicker = picker;
+  });
+}
+
+// Add reaction to message
+function addReaction(messageId, emoji) {
+  const reactions = messageReactions.get(messageId);
+
+  if (reactions[emoji]) {
+    reactions[emoji]++;
+  } else {
+    reactions[emoji] = 1;
+  }
+
+  updateReactionsDisplay(messageId);
+}
+
+// Update reactions display
+function updateReactionsDisplay(messageId) {
+  const messageDiv = document.querySelector(\`[data-message-id="\${messageId}"]\`);
+  if (!messageDiv) return;
+
+  const container = messageDiv.querySelector('.message-reactions');
+  const reactions = messageReactions.get(messageId);
+
+  // Clear existing reactions (keep the add button)
+  const addBtn = container.querySelector('.add-reaction-btn');
+  container.innerHTML = '';
+
+  // Add reactions
+  Object.entries(reactions).forEach(([emoji, count]) => {
+    if (count > 0) {
+      const reaction = document.createElement('span');
+      reaction.className = 'reaction';
+      reaction.innerHTML = \`
+        <span>\${emoji}</span>
+        <span class="reaction-count">\${count}</span>
+      \`;
+      reaction.addEventListener('click', () => {
+        // Toggle reaction
+        if (reactions[emoji] > 0) {
+          reactions[emoji]--;
+          if (reactions[emoji] === 0) {
+            delete reactions[emoji];
+          }
+          updateReactionsDisplay(messageId);
+        }
+      });
+      container.appendChild(reaction);
+    }
+  });
+
+  // Re-add the add button
+  container.appendChild(addBtn);
+}
+
+// Close reaction picker when clicking outside
+document.addEventListener('click', () => {
+  if (activeReactionPicker) {
+    activeReactionPicker.remove();
+    activeReactionPicker = null;
+  }
+});
 
 function getFileIcon(type) {
   if (type.startsWith('image/')) return '🖼️';
@@ -1896,6 +2221,147 @@ document.querySelectorAll('button, select, input, textarea').forEach(element => 
   }, { passive: false });
 });
 
+// Notification sound
+function playNotificationSound() {
+  if (!notificationsEnabled || !audioContext) return;
+
+  try {
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.2);
+  } catch (error) {
+    console.log('Could not play notification sound:', error);
+  }
+}
+
+function toggleNotifications() {
+  notificationsEnabled = !notificationsEnabled;
+  localStorage.setItem('notifications', notificationsEnabled);
+  addSystemMessage(\`Notifications \${notificationsEnabled ? 'enabled' : 'disabled'}\`);
+}
+
+// Dark mode functionality
+function initDarkMode() {
+  // Load saved theme preference
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateDarkModeButton(savedTheme);
+}
+
+function toggleDarkMode() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  updateDarkModeButton(newTheme);
+
+  addSystemMessage(\`Switched to \${newTheme} mode\`);
+}
+
+function updateDarkModeButton(theme) {
+  if (theme === 'dark') {
+    darkModeToggle.textContent = '☀️ Light';
+  } else {
+    darkModeToggle.textContent = '🌙 Dark';
+  }
+}
+
+// Search functionality
+function searchMessages(query) {
+  // Clear previous search highlights
+  document.querySelectorAll('.search-highlight').forEach(el => {
+    const parent = el.parentNode;
+    parent.replaceChild(document.createTextNode(el.textContent), el);
+    parent.normalize();
+  });
+  document.querySelectorAll('.search-match').forEach(el => {
+    el.classList.remove('search-match');
+  });
+
+  if (!query || query.length < 2) {
+    clearSearchBtn.style.display = 'none';
+    return;
+  }
+
+  clearSearchBtn.style.display = 'block';
+
+  const messages = document.querySelectorAll('.message:not(.system-message)');
+  let matchCount = 0;
+
+  messages.forEach(messageDiv => {
+    const content = messageDiv.querySelector('.message-content');
+    if (!content) return;
+
+    const textContent = content.childNodes[0]?.textContent || '';
+
+    if (textContent.toLowerCase().includes(query.toLowerCase())) {
+      messageDiv.classList.add('search-match');
+      matchCount++;
+
+      // Highlight matching text
+      const regex = new RegExp(\`(\${escapeRegex(query)})\`, 'gi');
+      const highlightedText = textContent.replace(regex, '<span class="search-highlight">$1</span>');
+
+      // Only replace the text node, not the entire content
+      if (content.childNodes[0]) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = highlightedText;
+        while (tempDiv.firstChild) {
+          content.insertBefore(tempDiv.firstChild, content.childNodes[0]);
+        }
+        content.removeChild(content.childNodes[content.childNodes.length - 1]);
+      }
+    }
+  });
+
+  if (matchCount > 0) {
+    const firstMatch = document.querySelector('.search-match');
+    if (firstMatch) {
+      firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  addSystemMessage(\`Found \${matchCount} message\${matchCount !== 1 ? 's' : ''} matching "\${query}"\`);
+}
+
+function escapeRegex(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function clearSearch() {
+  searchInput.value = '';
+  searchMessages('');
+  clearSearchBtn.style.display = 'none';
+}
+
+// Search event listeners
+searchInput.addEventListener('input', (e) => {
+  searchMessages(e.target.value);
+});
+
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    clearSearch();
+  }
+});
+
+clearSearchBtn.addEventListener('click', clearSearch);
+
+// Dark mode toggle event listener
+darkModeToggle.addEventListener('click', toggleDarkMode);
+
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -1910,6 +2376,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // Initialize
+initDarkMode();
 loadModels();
 connect();
 `;
