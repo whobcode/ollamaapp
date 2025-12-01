@@ -2529,7 +2529,7 @@ function searchMessages(query) {
 }
 
 function escapeRegex(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return string.replace(/[.*+?^${}()|[\]\\\\]/g, '\\\\$&');
 }
 
 function clearSearch() {
