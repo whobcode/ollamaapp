@@ -4,7 +4,7 @@ export class ChatSession {
   constructor(state, env) {
     this.state = state;
     this.env = env;
-    this.sessions = new Map();
+    this.sessions = new Map(); // sessionId -> { ws, peerId }
     this.conversationHistory = [];
     this.currentModel = 'deepseek-v3.1:671b-cloud';
   }
@@ -21,12 +21,11 @@ export class ChatSession {
     server.accept();
 
     const sessionId = crypto.randomUUID();
-    this.sessions.set(sessionId, server);
 
     server.addEventListener('message', async (event) => {
       try {
         const data = JSON.parse(event.data);
-        await this.handleMessage(server, data);
+        await this.handleMessage(server, sessionId, data);
       } catch (error) {
         console.error('Error handling message:', error);
         server.send(JSON.stringify({
@@ -37,8 +36,17 @@ export class ChatSession {
     });
 
     server.addEventListener('close', () => {
-      this.sessions.delete(sessionId);
-      console.log('Client disconnected');
+      const session = this.sessions.get(sessionId);
+      if (session) {
+        // Notify other peers that this peer left
+        this.broadcast({
+          type: 'peer-left',
+          peerId: session.peerId
+        }, sessionId);
+
+        this.sessions.delete(sessionId);
+        console.log('Client disconnected:', session.peerId);
+      }
     });
 
     server.addEventListener('error', (error) => {
@@ -48,7 +56,7 @@ export class ChatSession {
 
     server.send(JSON.stringify({
       type: 'welcome',
-      message: `Connected to Ollama Chat - Multi-Model Edition`,
+      message: `Connected to Ollama Chat - Multi-Model Edition with Video`,
       model: this.currentModel
     }));
 
@@ -58,8 +66,32 @@ export class ChatSession {
     });
   }
 
-  async handleMessage(ws, data) {
+  async handleMessage(ws, sessionId, data) {
     switch (data.type) {
+      case 'presence':
+        // Register peer
+        this.sessions.set(sessionId, {
+          ws: ws,
+          peerId: data.peerId
+        });
+
+        // Notify this peer about all existing peers
+        this.sessions.forEach((session, sid) => {
+          if (sid !== sessionId) {
+            ws.send(JSON.stringify({
+              type: 'peer-joined',
+              peerId: session.peerId
+            }));
+          }
+        });
+
+        // Notify all other peers about this new peer
+        this.broadcast({
+          type: 'peer-joined',
+          peerId: data.peerId
+        }, sessionId);
+        break;
+
       case 'chat':
         // Update model if specified
         if (data.model) {
@@ -76,12 +108,52 @@ export class ChatSession {
         }));
         break;
 
+      // WebRTC signaling
+      case 'video-started':
+      case 'video-stopped':
+        // Broadcast to all other peers
+        this.broadcast(data, sessionId);
+        break;
+
+      case 'webrtc-offer':
+      case 'webrtc-answer':
+      case 'webrtc-ice':
+        // Relay to specific peer
+        this.relayToPeer(data, data.peerId);
+        break;
+
       default:
         ws.send(JSON.stringify({
           type: 'error',
           message: `Unknown message type: ${data.type}`
         }));
     }
+  }
+
+  // Broadcast message to all peers except sender
+  broadcast(message, excludeSessionId) {
+    this.sessions.forEach((session, sid) => {
+      if (sid !== excludeSessionId) {
+        try {
+          session.ws.send(JSON.stringify(message));
+        } catch (error) {
+          console.error('Error broadcasting to peer:', error);
+        }
+      }
+    });
+  }
+
+  // Relay message to specific peer
+  relayToPeer(message, targetPeerId) {
+    this.sessions.forEach((session) => {
+      if (session.peerId === targetPeerId) {
+        try {
+          session.ws.send(JSON.stringify(message));
+        } catch (error) {
+          console.error('Error relaying to peer:', error);
+        }
+      }
+    });
   }
 
   async handleChat(ws, userMessage, files) {
@@ -108,15 +180,12 @@ export class ChatSession {
         });
       } else if (file.type.startsWith('video/') || file.type.startsWith('audio/')) {
         // For audio/video, add as text description for now
-        // In the future, these could be transcribed or processed
         messageContent.push({
           type: 'text',
           text: `[${file.type.startsWith('video/') ? 'Video' : 'Audio'} file attached: ${file.name}]`
         });
       } else {
         // For documents, try to extract text content
-        // Note: In a real implementation, you'd extract text from PDFs, docs, etc.
-        // For now, we'll treat them as attachments
         try {
           // If it's a data URL with text content
           if (file.data.startsWith('data:text/') || file.data.includes('text/plain')) {

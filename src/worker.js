@@ -71,7 +71,7 @@ const HTML = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ollama Realtime Chat - Multi-Model</title>
+  <title>Ollama Realtime Chat - Multi-Model with Video</title>
   <style>
     * {
       margin: 0;
@@ -91,7 +91,7 @@ const HTML = `<!DOCTYPE html>
 
     .container {
       width: 100%;
-      max-width: 1000px;
+      max-width: 1200px;
       height: 95vh;
       background: white;
       border-radius: 20px;
@@ -114,9 +114,30 @@ const HTML = `<!DOCTYPE html>
       margin-bottom: 12px;
     }
 
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
     .header h1 {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 600;
+    }
+
+    .video-toggle-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.3s;
+    }
+
+    .video-toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
     }
 
     .status {
@@ -169,6 +190,102 @@ const HTML = `<!DOCTYPE html>
     .model-selector select option {
       background: #667eea;
       color: white;
+    }
+
+    /* Video Panel */
+    .video-panel {
+      background: #1a1a1a;
+      padding: 15px;
+      display: none;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .video-panel.active {
+      display: block;
+    }
+
+    .video-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .video-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.3s;
+    }
+
+    .video-btn:hover {
+      background: #5568d3;
+    }
+
+    .video-btn.active {
+      background: #10b981;
+    }
+
+    .video-btn.danger {
+      background: #ef4444;
+    }
+
+    .video-btn.danger:hover {
+      background: #dc2626;
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+
+    .video-wrapper {
+      position: relative;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      aspect-ratio: 16/9;
+    }
+
+    .video-wrapper video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-label {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    .muted-indicator {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(239, 68, 68, 0.9);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    /* Main Content */
+    .main-content {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
     }
 
     .chat-container {
@@ -256,10 +373,6 @@ const HTML = `<!DOCTYPE html>
       display: flex;
       align-items: center;
       gap: 6px;
-    }
-
-    .file-badge-icon {
-      font-size: 14px;
     }
 
     .attached-image {
@@ -435,7 +548,10 @@ const HTML = `<!DOCTYPE html>
   <div class="container">
     <div class="header">
       <div class="header-top">
-        <h1>Ollama Realtime Chat</h1>
+        <div class="header-left">
+          <h1>Ollama Realtime Chat</h1>
+          <button class="video-toggle-btn" id="videoToggleBtn">📹 Video</button>
+        </div>
         <div class="status">
           <div class="status-dot disconnected" id="statusDot"></div>
           <span id="statusText">Connecting...</span>
@@ -449,9 +565,24 @@ const HTML = `<!DOCTYPE html>
       </div>
     </div>
 
-    <div class="chat-container" id="chatContainer">
-      <div class="system-message">
-        Welcome to Ollama Realtime Chat - Multi-Model Edition
+    <div class="video-panel" id="videoPanel">
+      <div class="video-controls">
+        <button class="video-btn" id="startCameraBtn">📷 Start Camera</button>
+        <button class="video-btn" id="toggleMicBtn">🎤 Mute</button>
+        <button class="video-btn" id="snapshotBtn">📸 Snapshot</button>
+        <button class="video-btn" id="screenShareBtn">🖥️ Share Screen</button>
+        <button class="video-btn danger" id="stopVideoBtn">⏹️ Stop</button>
+      </div>
+      <div class="video-grid" id="videoGrid">
+        <!-- Videos will be added here dynamically -->
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="chat-container" id="chatContainer">
+        <div class="system-message">
+          Welcome to Ollama Realtime Chat - Multi-Model Edition with Video Chat
+        </div>
       </div>
     </div>
 
@@ -467,7 +598,7 @@ const HTML = `<!DOCTYPE html>
           ></textarea>
         </div>
         <div class="controls">
-          <button id="attachButton" title="Attach files (images, documents, audio, video)">📎 Attach</button>
+          <button id="attachButton" title="Attach files">📎 Attach</button>
           <button id="sendButton" disabled>Send</button>
           <button id="clearButton">Clear</button>
         </div>
@@ -481,7 +612,7 @@ const HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-const APP_JS = `// WebSocket connection
+const APP_JS = `// WebSocket and WebRTC globals
 let ws = null;
 let isStreaming = false;
 let currentAssistantMessage = null;
@@ -489,6 +620,21 @@ let sessionId = null;
 let selectedModel = 'deepseek-v3.1:671b-cloud';
 let attachedFiles = [];
 let availableModels = [];
+
+// Video chat globals
+let localStream = null;
+let screenStream = null;
+let peerConnections = new Map(); // peerId -> RTCPeerConnection
+let isVideoActive = false;
+let isMicMuted = false;
+
+// ICE servers configuration
+const ICE_SERVERS = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ]
+};
 
 // DOM elements
 const chatContainer = document.getElementById('chatContainer');
@@ -501,6 +647,16 @@ const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const modelSelect = document.getElementById('modelSelect');
 const attachedFilesPreview = document.getElementById('attachedFilesPreview');
+
+// Video elements
+const videoToggleBtn = document.getElementById('videoToggleBtn');
+const videoPanel = document.getElementById('videoPanel');
+const videoGrid = document.getElementById('videoGrid');
+const startCameraBtn = document.getElementById('startCameraBtn');
+const toggleMicBtn = document.getElementById('toggleMicBtn');
+const snapshotBtn = document.getElementById('snapshotBtn');
+const screenShareBtn = document.getElementById('screenShareBtn');
+const stopVideoBtn = document.getElementById('stopVideoBtn');
 
 // Load available models
 async function loadModels() {
@@ -519,7 +675,6 @@ async function loadModels() {
     modelSelect.value = selectedModel;
   } catch (error) {
     console.error('Error loading models:', error);
-    modelSelect.innerHTML = '<option>Error loading models</option>';
   }
 }
 
@@ -546,6 +701,12 @@ function connect() {
     console.log('Connected to server');
     updateStatus('connected', 'Connected');
     sendButton.disabled = false;
+
+    // Announce presence for WebRTC
+    ws.send(JSON.stringify({
+      type: 'presence',
+      peerId: getSessionId()
+    }));
   };
 
   ws.onmessage = (event) => {
@@ -580,7 +741,7 @@ function updateStatus(status, text) {
 }
 
 // Handle incoming messages
-function handleMessage(data) {
+async function handleMessage(data) {
   switch (data.type) {
     case 'welcome':
       addSystemMessage(data.message);
@@ -594,11 +755,9 @@ function handleMessage(data) {
 
     case 'stream':
       hideTypingIndicator();
-
       if (!currentAssistantMessage) {
         currentAssistantMessage = addMessage('assistant', '');
       }
-
       currentAssistantMessage.textContent += data.content;
       scrollToBottom();
       break;
@@ -621,10 +780,388 @@ function handleMessage(data) {
     case 'cleared':
       addSystemMessage('Conversation cleared');
       break;
+
+    // WebRTC signaling messages
+    case 'peer-joined':
+      handlePeerJoined(data.peerId);
+      break;
+
+    case 'peer-left':
+      handlePeerLeft(data.peerId);
+      break;
+
+    case 'webrtc-offer':
+      await handleOffer(data.peerId, data.offer);
+      break;
+
+    case 'webrtc-answer':
+      await handleAnswer(data.peerId, data.answer);
+      break;
+
+    case 'webrtc-ice':
+      await handleIceCandidate(data.peerId, data.candidate);
+      break;
   }
 }
 
-// Add message to chat
+// WebRTC: Handle peer joined
+async function handlePeerJoined(peerId) {
+  if (peerId === getSessionId()) return; // Ignore self
+
+  console.log('Peer joined:', peerId);
+  addSystemMessage(\`User \${peerId.substring(0, 8)} joined the video chat\`);
+
+  if (localStream && isVideoActive) {
+    // Create offer for new peer
+    await createPeerConnection(peerId, true);
+  }
+}
+
+// WebRTC: Handle peer left
+function handlePeerLeft(peerId) {
+  console.log('Peer left:', peerId);
+  addSystemMessage(\`User \${peerId.substring(0, 8)} left the video chat\`);
+
+  // Close peer connection
+  const pc = peerConnections.get(peerId);
+  if (pc) {
+    pc.close();
+    peerConnections.delete(peerId);
+  }
+
+  // Remove video element
+  const videoElement = document.getElementById(\`video-\${peerId}\`);
+  if (videoElement) {
+    videoElement.remove();
+  }
+}
+
+// WebRTC: Create peer connection
+async function createPeerConnection(peerId, createOffer = false) {
+  const pc = new RTCPeerConnection(ICE_SERVERS);
+
+  // Add local tracks
+  if (localStream) {
+    localStream.getTracks().forEach(track => {
+      pc.addTrack(track, localStream);
+    });
+  }
+
+  // Handle ICE candidates
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      ws.send(JSON.stringify({
+        type: 'webrtc-ice',
+        peerId: peerId,
+        candidate: event.candidate
+      }));
+    }
+  };
+
+  // Handle remote stream
+  pc.ontrack = (event) => {
+    console.log('Received remote track from', peerId);
+    const remoteStream = event.streams[0];
+    addRemoteVideo(peerId, remoteStream);
+  };
+
+  pc.onconnectionstatechange = () => {
+    console.log(\`Connection state with \${peerId}: \${pc.connectionState}\`);
+    if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+      handlePeerLeft(peerId);
+    }
+  };
+
+  peerConnections.set(peerId, pc);
+
+  if (createOffer) {
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      ws.send(JSON.stringify({
+        type: 'webrtc-offer',
+        peerId: peerId,
+        offer: offer
+      }));
+    } catch (error) {
+      console.error('Error creating offer:', error);
+    }
+  }
+
+  return pc;
+}
+
+// WebRTC: Handle offer
+async function handleOffer(peerId, offer) {
+  console.log('Received offer from', peerId);
+
+  const pc = await createPeerConnection(peerId, false);
+
+  try {
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    ws.send(JSON.stringify({
+      type: 'webrtc-answer',
+      peerId: peerId,
+      answer: answer
+    }));
+  } catch (error) {
+    console.error('Error handling offer:', error);
+  }
+}
+
+// WebRTC: Handle answer
+async function handleAnswer(peerId, answer) {
+  console.log('Received answer from', peerId);
+
+  const pc = peerConnections.get(peerId);
+  if (pc) {
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    } catch (error) {
+      console.error('Error handling answer:', error);
+    }
+  }
+}
+
+// WebRTC: Handle ICE candidate
+async function handleIceCandidate(peerId, candidate) {
+  const pc = peerConnections.get(peerId);
+  if (pc) {
+    try {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (error) {
+      console.error('Error adding ICE candidate:', error);
+    }
+  }
+}
+
+// Video: Add remote video element
+function addRemoteVideo(peerId, stream) {
+  // Remove existing video if any
+  let videoWrapper = document.getElementById(\`video-\${peerId}\`);
+
+  if (!videoWrapper) {
+    videoWrapper = document.createElement('div');
+    videoWrapper.className = 'video-wrapper';
+    videoWrapper.id = \`video-\${peerId}\`;
+
+    const video = document.createElement('video');
+    video.autoplay = true;
+    video.playsInline = true;
+
+    const label = document.createElement('div');
+    label.className = 'video-label';
+    label.textContent = \`User \${peerId.substring(0, 8)}\`;
+
+    videoWrapper.appendChild(video);
+    videoWrapper.appendChild(label);
+    videoGrid.appendChild(videoWrapper);
+  }
+
+  const video = videoWrapper.querySelector('video');
+  video.srcObject = stream;
+}
+
+// Video: Start camera
+async function startCamera() {
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 1280, height: 720 },
+      audio: true
+    });
+
+    // Add local video
+    const localVideoWrapper = document.createElement('div');
+    localVideoWrapper.className = 'video-wrapper';
+    localVideoWrapper.id = 'video-local';
+
+    const localVideo = document.createElement('video');
+    localVideo.autoplay = true;
+    localVideo.muted = true; // Mute local audio to prevent feedback
+    localVideo.playsInline = true;
+    localVideo.srcObject = localStream;
+
+    const label = document.createElement('div');
+    label.className = 'video-label';
+    label.textContent = 'You (Local)';
+
+    localVideoWrapper.appendChild(localVideo);
+    localVideoWrapper.appendChild(label);
+    videoGrid.insertBefore(localVideoWrapper, videoGrid.firstChild);
+
+    isVideoActive = true;
+    startCameraBtn.textContent = '📷 Camera On';
+    startCameraBtn.classList.add('active');
+
+    // Notify server about video start
+    ws.send(JSON.stringify({
+      type: 'video-started',
+      peerId: getSessionId()
+    }));
+
+    addSystemMessage('Camera started - You are now visible to other participants');
+  } catch (error) {
+    console.error('Error starting camera:', error);
+    alert('Could not access camera: ' + error.message);
+  }
+}
+
+// Video: Stop camera
+function stopCamera() {
+  if (localStream) {
+    localStream.getTracks().forEach(track => track.stop());
+    localStream = null;
+  }
+
+  const localVideo = document.getElementById('video-local');
+  if (localVideo) {
+    localVideo.remove();
+  }
+
+  // Close all peer connections
+  peerConnections.forEach((pc, peerId) => {
+    pc.close();
+  });
+  peerConnections.clear();
+
+  isVideoActive = false;
+  startCameraBtn.textContent = '📷 Start Camera';
+  startCameraBtn.classList.remove('active');
+
+  ws.send(JSON.stringify({
+    type: 'video-stopped',
+    peerId: getSessionId()
+  }));
+
+  addSystemMessage('Camera stopped');
+}
+
+// Video: Toggle microphone
+function toggleMicrophone() {
+  if (!localStream) return;
+
+  const audioTrack = localStream.getAudioTracks()[0];
+  if (audioTrack) {
+    audioTrack.enabled = !audioTrack.enabled;
+    isMicMuted = !audioTrack.enabled;
+
+    toggleMicBtn.textContent = isMicMuted ? '🎤 Unmute' : '🎤 Mute';
+    toggleMicBtn.classList.toggle('danger', isMicMuted);
+
+    addSystemMessage(isMicMuted ? 'Microphone muted' : 'Microphone unmuted');
+  }
+}
+
+// Video: Capture snapshot
+async function captureSnapshot() {
+  if (!localStream) {
+    alert('Please start your camera first');
+    return;
+  }
+
+  const video = document.querySelector('#video-local video');
+  if (!video) return;
+
+  // Create canvas and capture frame
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+
+  // Convert to data URL
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+  // Add to attached files
+  attachedFiles.push({
+    name: \`snapshot_\${Date.now()}.jpg\`,
+    type: 'image/jpeg',
+    size: dataUrl.length,
+    data: dataUrl
+  });
+
+  updateAttachedFilesPreview();
+  addSystemMessage('Snapshot captured and attached - ready to send to AI');
+}
+
+// Video: Start screen share
+async function startScreenShare() {
+  try {
+    screenStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { cursor: 'always' },
+      audio: false
+    });
+
+    // Replace video track in peer connections
+    const videoTrack = screenStream.getVideoTracks()[0];
+
+    peerConnections.forEach((pc) => {
+      const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+      if (sender) {
+        sender.replaceTrack(videoTrack);
+      }
+    });
+
+    // Update local video
+    const localVideo = document.querySelector('#video-local video');
+    if (localVideo) {
+      localVideo.srcObject = screenStream;
+    }
+
+    screenShareBtn.textContent = '🖥️ Stop Sharing';
+    screenShareBtn.classList.add('active');
+
+    // When screen sharing stops
+    videoTrack.onended = () => {
+      stopScreenShare();
+    };
+
+    addSystemMessage('Screen sharing started');
+  } catch (error) {
+    console.error('Error starting screen share:', error);
+    if (error.name !== 'NotAllowedError') {
+      alert('Could not start screen sharing: ' + error.message);
+    }
+  }
+}
+
+// Video: Stop screen share
+function stopScreenShare() {
+  if (!screenStream) return;
+
+  screenStream.getTracks().forEach(track => track.stop());
+  screenStream = null;
+
+  // Restore camera in peer connections
+  if (localStream) {
+    const videoTrack = localStream.getVideoTracks()[0];
+
+    peerConnections.forEach((pc) => {
+      const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+      if (sender) {
+        sender.replaceTrack(videoTrack);
+      }
+    });
+
+    // Update local video
+    const localVideo = document.querySelector('#video-local video');
+    if (localVideo) {
+      localVideo.srcObject = localStream;
+    }
+  }
+
+  screenShareBtn.textContent = '🖥️ Share Screen';
+  screenShareBtn.classList.remove('active');
+
+  addSystemMessage('Screen sharing stopped');
+}
+
+// Chat functions
 function addMessage(role, content, files = []) {
   const messageDiv = document.createElement('div');
   messageDiv.className = \`message \${role}\`;
@@ -637,7 +1174,6 @@ function addMessage(role, content, files = []) {
   messageContent.className = 'message-content';
   messageContent.textContent = content;
 
-  // Add file attachments display
   if (files && files.length > 0) {
     const filesDiv = document.createElement('div');
     filesDiv.className = 'attached-files';
@@ -653,7 +1189,7 @@ function addMessage(role, content, files = []) {
         const badge = document.createElement('div');
         badge.className = 'file-badge';
         badge.innerHTML = \`
-          <span class="file-badge-icon">\${getFileIcon(file.type)}</span>
+          <span>\${getFileIcon(file.type)}</span>
           <span>\${file.name}</span>
         \`;
         filesDiv.appendChild(badge);
@@ -667,14 +1203,12 @@ function addMessage(role, content, files = []) {
 
   messageDiv.appendChild(avatar);
   messageDiv.appendChild(messageContent);
-
   chatContainer.appendChild(messageDiv);
   scrollToBottom();
 
   return messageContent;
 }
 
-// Get file icon based on type
 function getFileIcon(type) {
   if (type.startsWith('image/')) return '🖼️';
   if (type.startsWith('video/')) return '🎥';
@@ -684,7 +1218,6 @@ function getFileIcon(type) {
   return '📎';
 }
 
-// Add system message
 function addSystemMessage(content) {
   const messageDiv = document.createElement('div');
   messageDiv.className = 'system-message';
@@ -693,7 +1226,6 @@ function addSystemMessage(content) {
   scrollToBottom();
 }
 
-// Show typing indicator
 function showTypingIndicator() {
   hideTypingIndicator();
 
@@ -720,7 +1252,6 @@ function showTypingIndicator() {
   scrollToBottom();
 }
 
-// Hide typing indicator
 function hideTypingIndicator() {
   const indicator = document.getElementById('typingIndicator');
   if (indicator) {
@@ -728,12 +1259,11 @@ function hideTypingIndicator() {
   }
 }
 
-// Scroll to bottom of chat
 function scrollToBottom() {
   chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// Handle file selection
+// File handling
 fileInput.addEventListener('change', async (e) => {
   const files = Array.from(e.target.files);
 
@@ -751,15 +1281,12 @@ fileInput.addEventListener('change', async (e) => {
       updateAttachedFilesPreview();
     };
 
-    // Read as data URL for all files
     reader.readAsDataURL(file);
   }
 
-  // Reset file input
   fileInput.value = '';
 });
 
-// Update attached files preview
 function updateAttachedFilesPreview() {
   attachedFilesPreview.innerHTML = '';
 
@@ -776,7 +1303,6 @@ function updateAttachedFilesPreview() {
     attachedFilesPreview.appendChild(fileItem);
   });
 
-  // Add remove handlers
   document.querySelectorAll('.remove-file').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const index = parseInt(e.target.getAttribute('data-index'));
@@ -786,7 +1312,6 @@ function updateAttachedFilesPreview() {
   });
 }
 
-// Send message
 function sendMessage() {
   const message = messageInput.value.trim();
 
@@ -794,10 +1319,8 @@ function sendMessage() {
     return;
   }
 
-  // Add user message to chat with files
   addMessage('user', message || '(files attached)', [...attachedFiles]);
 
-  // Send to server
   ws.send(JSON.stringify({
     type: 'chat',
     content: message,
@@ -809,14 +1332,12 @@ function sendMessage() {
     }))
   }));
 
-  // Clear input and files
   messageInput.value = '';
   messageInput.style.height = 'auto';
   attachedFiles = [];
   updateAttachedFilesPreview();
 }
 
-// Clear conversation
 function clearConversation() {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     return;
@@ -830,13 +1351,12 @@ function clearConversation() {
   }));
 }
 
-// Auto-resize textarea
+// Event listeners
 messageInput.addEventListener('input', () => {
   messageInput.style.height = 'auto';
   messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + 'px';
 });
 
-// Event listeners
 sendButton.addEventListener('click', sendMessage);
 clearButton.addEventListener('click', clearConversation);
 attachButton.addEventListener('click', () => fileInput.click());
@@ -852,6 +1372,33 @@ messageInput.addEventListener('keydown', (e) => {
     sendMessage();
   }
 });
+
+// Video control event listeners
+videoToggleBtn.addEventListener('click', () => {
+  videoPanel.classList.toggle('active');
+  videoToggleBtn.textContent = videoPanel.classList.contains('active') ? '📹 Hide Video' : '📹 Video';
+});
+
+startCameraBtn.addEventListener('click', () => {
+  if (isVideoActive) {
+    stopCamera();
+  } else {
+    startCamera();
+  }
+});
+
+toggleMicBtn.addEventListener('click', toggleMicrophone);
+snapshotBtn.addEventListener('click', captureSnapshot);
+
+screenShareBtn.addEventListener('click', () => {
+  if (screenStream) {
+    stopScreenShare();
+  } else {
+    startScreenShare();
+  }
+});
+
+stopVideoBtn.addEventListener('click', stopCamera);
 
 // Initialize
 loadModels();
