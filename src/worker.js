@@ -81,7 +81,7 @@ const HTML = `<!DOCTYPE html>
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d1a1a 100%);
       height: 100vh;
       display: flex;
       justify-content: center;
@@ -102,7 +102,7 @@ const HTML = `<!DOCTYPE html>
     }
 
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #DC143C 0%, #B8860B 100%);
       color: white;
       padding: 15px 30px;
     }
@@ -151,12 +151,12 @@ const HTML = `<!DOCTYPE html>
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #4ade80;
+      background: #B8860B;
       animation: pulse 2s infinite;
     }
 
     .status-dot.disconnected {
-      background: #ef4444;
+      background: #DC143C;
       animation: none;
     }
 
@@ -188,7 +188,7 @@ const HTML = `<!DOCTYPE html>
     }
 
     .model-selector select option {
-      background: #667eea;
+      background: #DC143C;
       color: white;
     }
 
@@ -213,7 +213,7 @@ const HTML = `<!DOCTYPE html>
     }
 
     .video-btn {
-      background: #667eea;
+      background: #DC143C;
       color: white;
       border: none;
       padding: 8px 16px;
@@ -224,19 +224,19 @@ const HTML = `<!DOCTYPE html>
     }
 
     .video-btn:hover {
-      background: #5568d3;
+      background: #B22222;
     }
 
     .video-btn.active {
-      background: #10b981;
+      background: #B8860B;
     }
 
     .video-btn.danger {
-      background: #ef4444;
+      background: #8B0000;
     }
 
     .video-btn.danger:hover {
-      background: #dc2626;
+      background: #660000;
     }
 
     .video-grid {
@@ -274,7 +274,7 @@ const HTML = `<!DOCTYPE html>
       position: absolute;
       top: 8px;
       right: 8px;
-      background: rgba(239, 68, 68, 0.9);
+      background: rgba(220, 20, 60, 0.9);
       color: white;
       padding: 4px 8px;
       border-radius: 4px;
@@ -335,11 +335,11 @@ const HTML = `<!DOCTYPE html>
     }
 
     .message.user .message-avatar {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #DC143C 0%, #8B0000 100%);
     }
 
     .message.assistant .message-avatar {
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      background: linear-gradient(135deg, #B8860B 0%, #8B6914 100%);
     }
 
     .message-content {
@@ -354,7 +354,7 @@ const HTML = `<!DOCTYPE html>
     }
 
     .message.user .message-content {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #DC143C 0%, #8B0000 100%);
       color: white;
     }
 
@@ -385,10 +385,10 @@ const HTML = `<!DOCTYPE html>
     .system-message {
       text-align: center;
       padding: 12px;
-      background: #e0e7ff;
+      background: #2d2416;
       border-radius: 12px;
       font-size: 13px;
-      color: #4338ca;
+      color: #B8860B;
       align-self: center;
     }
 
@@ -402,7 +402,7 @@ const HTML = `<!DOCTYPE html>
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #9ca3af;
+      background: #B8860B;
       animation: typing 1.4s infinite;
     }
 
@@ -447,7 +447,7 @@ const HTML = `<!DOCTYPE html>
     }
 
     .remove-file {
-      background: #ef4444;
+      background: #DC143C;
       color: white;
       border: none;
       border-radius: 50%;
@@ -485,7 +485,7 @@ const HTML = `<!DOCTYPE html>
 
     #messageInput:focus {
       outline: none;
-      border-color: #667eea;
+      border-color: #B8860B;
     }
 
     button {
@@ -501,12 +501,12 @@ const HTML = `<!DOCTYPE html>
     }
 
     #sendButton {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #DC143C 0%, #8B0000 100%);
     }
 
     #sendButton:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      box-shadow: 0 4px 12px rgba(220, 20, 60, 0.4);
     }
 
     #sendButton:disabled {
@@ -515,19 +515,19 @@ const HTML = `<!DOCTYPE html>
     }
 
     #attachButton {
-      background: #10b981;
+      background: #B8860B;
     }
 
     #attachButton:hover {
-      background: #059669;
+      background: #8B6914;
     }
 
     #clearButton {
-      background: #ef4444;
+      background: #8B0000;
     }
 
     #clearButton:hover {
-      background: #dc2626;
+      background: #660000;
     }
 
     .controls {
