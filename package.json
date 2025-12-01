@@ -1,0 +1,22 @@
+{
+  "name": "ollamaapp",
+  "version": "1.0.0",
+  "description": "Realtime AI application using Cloudflare Workers and Ollama Cloud with deepseek-v3.1:671b-cloud",
+  "type": "module",
+  "main": "src/worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "keywords": ["ollama", "ai", "realtime", "chat", "deepseek", "cloudflare", "workers", "durable-objects"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ollama": "^0.6.3"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0",
+    "@cloudflare/workers-types": "^4.0.0"
+  }
+}
